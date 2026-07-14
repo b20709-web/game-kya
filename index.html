@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이상한 놀이공원: 저주받은 복도</title>
+    <style>
+        :root {
+            --primary-color: #8b263e;
+            --secondary-color: #4a1525;
+            --success-color: #2ec4b6;
+            --danger-color: #ff3333;
+            --card-bg: rgba(20, 20, 25, 0.85);
+            --text-color: #f1ebd9;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #050508;
+            color: var(--text-color);
+            font-family: 'Malgun Gothic', -apple-system, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 게임 메인 컨테이너: 제공받은 복도 이미지 */
+        #game-container {
+            width: 1000px;
+            height: 560px;
+            background-image: url('스크린샷 2026-07-14 094118.jpg');
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            border: 4px solid #2a1a15;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        /* 붉은 오염도 필터 레이어 */
+        #bg-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0);
+            transition: background-color 0.5s ease;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* 👻 귀신 이미지 레이어 (기본적으로 저 멀리 작고 투명하게 배치) */
+        #ghost-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 450px;
+            height: auto;
+            background-image: url('귀신-removebg-preview.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            transform: translate(-50%, -40%) scale(0.2);
+            opacity: 0;
+            transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.8s ease;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* 중앙 콘텐츠 카드 */
+        .card {
+            position: relative;
+            z-index: 3; /* 귀신보다 앞에 위치 */
+            width: 600px;
+            background-color: var(--card-bg);
+            border: 1px solid rgba(139, 38, 62, 0.3);
+            border-radius: 12px;
+            padding: 40px;
+            box-sizing: border-box;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: all 0.5s ease;
+        }
+
+        .title {
+            font-size: 26px;
+            font-weight: bold;
+            color: #e6b86a;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+        }
+
+        .message-box {
+            font-size: 15px;
+            line-height: 1.8;
+            color: #d1c7bd;
+            background-color: rgba(0, 0, 0, 0.4);
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-color);
+            margin-bottom: 25px;
+            text-align: left;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: #ffffff;
+            border: 1px solid #a63a50;
+            padding: 12px 28px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 10px rgba(139, 38, 62, 0.4);
+        }
+
+        .btn:hover {
+            background-color: #a63a50;
+            transform: translateY(-1px);
+        }
+
+        /* 퀴즈 상단 바 */
+        #quiz-header {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 12px;
+            gap: 6px;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .progress-text {
+            font-size: 14px;
+            font-weight: bold;
+            color: #a0968c;
+        }
+
+        .timer-text {
+            font-size: 17px;
+            font-weight: bold;
+            color: #e6b86a;
+            transition: color 0.3s ease;
+        }
+
+        .danger-status {
+            font-size: 13px;
+            font-weight: bold;
+            color: #a0968c;
+            text-align: right;
+            transition: color 0.3s ease;
+        }
+
+        /* 5초 전 경고 애니메이션 */
+        .time-warning {
+            color: var(--danger-color) !important;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0.3; }
+        }
+
+        #question-text {
+            font-size: 17px;
+            font-weight: bold;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            text-align: left;
+            width: 100%;
+            color: #f1ebd9;
+            transition: color 0.3s ease;
+        }
+
+        #options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .option-btn {
+            background-color: rgba(30, 30, 35, 0.7);
+            color: #d1c7bd;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 12px 18px;
+            font-size: 14px;
+            text-align: left;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--primary-color);
+            background-color: rgba(139, 38, 62, 0.2);
+            color: #ffffff;
+        }
+
+        #feedback-text {
+            font-size: 15px;
+            font-weight: bold;
+            min-height: 22px;
+            margin-top: 5px;
+            text-align: center;
+        }
+
+        .correct { color: var(--success-color); }
+        .wrong { color: var(--danger-color); }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <!-- 이펙트 레이어들 -->
+    <div id="bg-overlay"></div>
+    <div id="ghost-overlay"></div>
+
+    <!-- 1. 시작 화면 -->
+    <div id="intro-screen" class="card">
+        <div class="title">이상한 놀이공원: 저주받은 복도</div>
+        <div class="message-box">
+            당신은 이상한 놀이공원에 초대되었습니다.<br><br>
+            이곳은 오직 왼쪽에서 오른쪽으로만 전진할 수 있는 단순한 복도 형태의 기괴한 공간입니다.<br>
+            방을 지날 때마다 깊어지는 10개의 확률과 통계 수학 문제를 풀고 나아가세요.<br><br>
+            <strong>※ 규칙:</strong> 제한 시간은 문항당 1분이며, 총 3번 실패 시 복도의 처음 지점으로 되돌아갑니다. 틀릴 때마다 무언가가 다가옵니다.
+        </div>
+        <button id="start-btn" class="btn">복도로 들어가기</button>
+    </div>
+
+    <!-- 2. 메인 게임 화면 -->
+    <div id="game-screen" class="card hidden">
+        <div id="quiz-header">
+            <div class="header-top">
+                <div id="progress" class="progress-text">복도 진행도: 1 / 10</div>
+                <div id="timer" class="timer-text">남은 시간: 60초</div>
+            </div>
+            <div id="danger-indicator" class="danger-status">귀신과의 거리: 안전함</div>
+        </div>
+        <div id="question-text">문제가 표시됩니다.</div>
+        <div id="options-container"></div>
+        <div id="feedback-text"></div>
+    </div>
+
+    <!-- 3. 엔딩 화면 -->
+    <div id="outro-screen" class="card hidden">
+        <div class="title" style="color: var(--success-color);">탈출 성공</div>
+        <div class="message-box" style="text-align: center;">
+            모든 확률적 속박을 풀어내고 복도의 끝에 도달했습니다.<br><br>
+            <strong>"당신은 현실로 되돌아갑니다."</strong>
+        </div>
+        <button id="reset-btn" class="btn">다시 도전하기</button>
+    </div>
+</div>
+
+<script>
+    const quizData = [
+        {
+            question: "Q1. 다음 중 (4-x)³ 을 바르게 전개한 식을 고르시오.",
+            options: ["64 - 12x + 3x² - x³", "64 - 48x + 12x² - x³", "64 + 48x + 12x² + x³", "16 - 8x + x²"],
+            answer: 1
+        },
+        {
+            question: "Q2. 모평균과 모분산의 수학적 기호가 알맞게 짝지어진 것을 고르시오.",
+            options: ["m , σ²", "X̄ , s²", "E(X) , V(X)", "μ , s"],
+            answer: 0
+        },
+        {
+            question: "Q3. 주사위 두 개를 동시에 던질 때, 나오는 눈의 수의 합이 5 이상일 확률을 구하시오.",
+            options: ["5/36", "1/6", "5/6", "31/36"],
+            answer: 2
+        },
+        {
+            question: "Q4. 남학생 4명과 여학생 3명을 일렬로 세울 때, 여학생끼리 전부 이웃하게 세우는 경우의 수는?",
+            options: ["144가지", "720가지", "240가지", "120가지"],
+            answer: 1
+        },
+        {
+            question: "Q5. 'STATISTICS'라는 10개의 문자를 일렬로 나열할 때, 만들 수 있는 모든 경우의 수는?",
+            options: ["50,400가지", "75,600가지", "3,628,800가지", "151,200가지"],
+            answer: 0
+        },
+        {
+            question: "Q6. 두 사건 A와 B가 서로 독립이고 P(A) = 1/3, P(B) = 1/2 일 때, P(A ∪ B)의 값은?",
+            options: ["5/6", "1/6", "2/3", "4/5"],
+            answer: 2
+        },
+        {
+            question: "Q7. 한 개의 주사위를 6번 던질 때, 짝수의 눈이 정확히 4번 나올 확률을 구하시오.",
+            options: ["15/64", "5/16", "15/32", "3/16"],
+            answer: 0
+        },
+        {
+            question: "Q8. 확률변수 X가 이항분포 B(100, 1/5)을 따를 때, X의 표준편차(σ)의 값은?",
+            options: ["20", "16", "5", "4"],
+            answer: 3
+        },
+        {
+            question: "Q9. 어느 공장에서 생산되는 제품의 무게는 평균이 50g, 표준편차가 4g인 정규분포를 따른다. 임의추출한 4개 제품의 표본평균(X̄)의 표준편차는?",
+            options: ["1g", "2g", "4g", "0.5g"],
+            answer: 1
+        },
+        {
+            question: "Q10. 표준정규분포 N(0, 1)을 따르는 확률변수 Z에 대하여, P(0 ≤ Z ≤ 1.96) = 0.4750이다. 모평균을 신뢰도 95%로 추정할 때 사용하는 신뢰구간의 상수로 알맞은 것은?",
+            options: ["1.65", "1.96", "2.58", "0.475"],
+            answer: 1
+        }
+    ];
+
+    let currentLevel = 0;
+    let wrongCount = 0;
+    const maxWrong = 3;
+    
+    let timeLeft = 60;
+    let timerInterval = null;
+
+    const introScreen = document.getElementById('intro-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const outroScreen = document.getElementById('outro-screen');
+    const questionText = document.getElementById('question-text');
+    const optionsContainer = document.getElementById('options-container');
+    const feedbackText = document.getElementById('feedback-text');
+    const progressText = document.getElementById('progress');
+    const timerText = document.getElementById('timer');
+    const dangerIndicator = document.getElementById('danger-indicator');
+    const bgOverlay = document.getElementById('bg-overlay');
+    const ghostOverlay = document.getElementById('ghost-overlay');
+    const gameScreenCard = document.getElementById('game-screen');
+    
+    const startBtn = document.getElementById('start-btn');
+    const resetBtn = document.getElementById('reset-btn');
+
+    startBtn.addEventListener('click', startGame);
+    resetBtn.addEventListener('click', resetGame);
+
+    function startGame() {
+        introScreen.classList.add('hidden');
+        gameScreen.classList.remove('hidden');
+        loadQuiz();
+    }
+
+    function startTimer() {
+        clearInterval(timerInterval);
+        timeLeft = 60;
+        timerText.innerText = `남은 시간: ${timeLeft}초`;
+        timerText.classList.remove('time-warning');
+
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            timerText.innerText = `남은 시간: ${timeLeft}초`;
+
+            if (timeLeft === 5) {
+                timerText.classList.add('time-warning');
+                feedbackText.className = 'wrong';
+                feedbackText.innerText = '⚠️ 경고: 복도의 잔류 시간이 한계에 도달했습니다!';
+            }
+
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                handleTimeOut();
+            }
+        }, 1000);
+    }
+
+    function handleTimeOut() {
+        wrongCount++;
+        feedbackText.className = 'wrong';
+        feedbackText.innerText = '⏱️ 시간 초과! 기척이 더 가까워집니다.';
+        
+        const buttons = document.querySelectorAll('.option-btn');
+        buttons.forEach(btn => btn.disabled = true);
+
+        applyGhostEffects();
+
+        setTimeout(() => {
+            if (wrongCount >= maxWrong) {
+                showEndScreen(false);
+            } else {
+                loadQuiz();
+            }
+        }, 2000);
+    }
+
+    function loadQuiz() {
+        clearInterval(timerInterval);
+        feedbackText.innerText = '';
+        progressText.innerText = `복도 진행도: ${currentLevel + 1} / ${quizData.length}`;
+        
+        const currentStage = quizData[currentLevel];
+        questionText.innerText = currentStage.question;
+
+        optionsContainer.innerHTML = '';
+        currentStage.options.forEach((opt, idx) => {
+            const button = document.createElement('button');
+            button.className = 'option-btn';
+            button.innerText = opt;
+            button.onclick = () => checkAnswer(idx);
+            optionsContainer.appendChild(button);
+        });
+
+        startTimer();
+    }
+
+    function checkAnswer(selectedIdx) {
+        clearInterval(timerInterval);
+        const currentStage = quizData[currentLevel];
+        const buttons = document.querySelectorAll('.option-btn');
+        buttons.forEach(btn => btn.disabled = true);
+
+        if (selectedIdx === currentStage.answer) {
+            feedbackText.className = 'correct';
+            feedbackText.innerText = '⭕ 정답입니다! 다음 구역으로 전진합니다.';
+            currentLevel++;
+
+            setTimeout(() => {
+                if (currentLevel < quizData.length) {
+                    loadQuiz();
+                } else {
+                    showEndScreen(true);
+                }
+            }, 1200);
+        } else {
+            wrongCount++;
+            feedbackText.className = 'wrong';
+            feedbackText.innerText = '❌ 오답입니다. 무언가가 거리를 좁혀옵니다.';
+            
+            applyGhostEffects();
+
+            setTimeout(() => {
+                if (wrongCount >= maxWrong) {
+                    showEndScreen(false);
+                } else {
+                    buttons.forEach(btn => btn.disabled = false);
+                    feedbackText.innerText = '';
+                    startTimer();
+                }
+            }, 1500);
+        }
+    }
+
+    /* 👻 틀릴 때마다 귀신 이미지가 점점 크게 확장 및 투명도 증가 */
+    function applyGhostEffects() {
+        if (wrongCount === 1) {
+            bgOverlay.style.backgroundColor = "rgba(139, 38, 62, 0.2)";
+            gameScreenCard.style.borderColor = "#ff5555";
+            dangerIndicator.innerText = "귀신과의 거리: 접근 중 (⚠️ 경고)";
+            dangerIndicator.style.color = "#ff5555";
+            
+            // 귀신이 실루엣처럼 보이기 시작함 (크기 0.5배 증가)
+            ghostOverlay.style.transform = "translate(-50%, -45%) scale(0.5)";
+            ghostOverlay.style.opacity = "0.4";
+
+        } else if (wrongCount === 2) {
+            bgOverlay.style.backgroundColor = "rgba(139, 38, 62, 0.45)";
+            gameScreenCard.style.borderColor = "var(--danger-color)";
+            dangerIndicator.innerText = "귀신과의 거리: 코앞 (🚨 위험)";
+            dangerIndicator.style.color = "var(--danger-color)";
+            
+            // 귀신이 카드 바로 뒤편까지 덮침 (크기 1.1배 증가)
+            ghostOverlay.style.transform = "translate(-50%, -50%) scale(1.1)";
+            ghostOverlay.style.opacity = "0.85";
+        }
+    }
+
+    function showEndScreen(isSuccess) {
+        clearInterval(timerInterval);
+        gameScreen.classList.add('hidden');
+        if (isSuccess) {
+            clearEffects();
+            outroScreen.classList.remove('hidden');
+        } else {
+            // 3번째 실패: 완전히 덮침
+            ghostOverlay.style.transform = "translate(-50%, -50%) scale(2.5)";
+            ghostOverlay.style.opacity = "1";
+            
+            setTimeout(() => {
+                alert("귀신에게 붙잡혀 복도의 처음 지점으로 쫓겨났습니다.");
+                resetGame();
+            }, 600);
+        }
+    }
+
+    function clearEffects() {
+        bgOverlay.style.backgroundColor = "rgba(0, 0, 0, 0)";
+        gameScreenCard.style.borderColor = "rgba(139, 38, 62, 0.3)";
+        dangerIndicator.innerText = "귀신과의 거리: 안전함";
+        dangerIndicator.style.color = "#a0968c";
+        timerText.classList.remove('time-warning');
+        
+        // 귀신 상태 초기화
+        ghostOverlay.style.transform = "translate(-50%, -40%) scale(0.2)";
+        ghostOverlay.style.opacity = "0";
+    }
+
+    function resetGame() {
+        clearInterval(timerInterval);
+        currentLevel = 0;
+        wrongCount = 0;
+        clearEffects();
+        outroScreen.classList.add('hidden');
+        gameScreen.classList.add('hidden');
+        introScreen.classList.remove('hidden');
+    }
+</script>
+</body>
+</html>
